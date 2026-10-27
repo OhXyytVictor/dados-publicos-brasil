@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel Macroeconômico: Câmbio, Juros, Inflação e Varejo de Tecnologia</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0b0f17; --card-bg: #141c28; --card-border: #233044;
+      --text: #e2e8f0; --text-muted: #94a3b8; --accent: #2563eb;
+      --positive: #10b981; --negative: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); padding: 30px 20px; line-height: 1.5; }
+    .container { max-width: 1240px; margin: 0 auto; }
+    header { margin-bottom: 22px; border-bottom: 1px solid var(--card-border); padding-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+    h1 { font-size: 1.5rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .subtitle { color: var(--text-muted); font-size: 0.9rem; }
+    .author-tag { font-size: 0.8rem; color: var(--text-muted); text-align: right; }
+    .author-tag a { color: var(--text-muted); }
+    .filter-bar { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px; padding: 14px 18px; margin-bottom: 18px; }
+    .filter-bar label { display: flex; flex-direction: column; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); gap: 4px; font-weight: 600; }
+    .filter-bar select { background: #0d131f; color: var(--text); border: 1px solid var(--card-border); border-radius: 5px; padding: 7px 10px; font-size: 0.85rem; }
+    .filter-bar button { background: transparent; color: var(--text); border: 1px solid var(--card-border); border-radius: 5px; padding: 8px 14px; font-size: 0.8rem; cursor: pointer; }
+    .filter-bar button:hover { background: #1e293b; }
+    .presets { display: flex; gap: 8px; }
+    .presets button.active { background: var(--accent); border-color: var(--accent); }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .kpi-card, .chart-box { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px; padding: 20px; }
+    .kpi-title { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; }
+    .kpi-value { font-size: 1.6rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .kpi-sub { font-size: 0.8rem; color: var(--text-muted); }
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 20px; margin-bottom: 20px; }
+    .chart-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 14px; color: #fff; }
+    .info-card { background: #0d131f; border: 1px solid var(--card-border); border-left: 4px solid var(--accent); border-radius: 6px; padding: 14px 18px; margin-top: 14px; font-size: 0.84rem; color: #cbd5e1; line-height: 1.6; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { padding: 9px 12px; text-align: right; border-bottom: 1px solid var(--card-border); }
+    th:first-child, td:first-child { text-align: left; }
+    th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.03em; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+    footer { text-align: center; margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--card-border); color: var(--text-muted); font-size: 0.8rem; }
+    footer a { color: var(--text-muted); }
+    @media (max-width: 560px) { .charts-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Painel Macroeconômico: Câmbio, Juros, Inflação e Varejo de Tecnologia</h1>
+        <p class="subtitle">Séries do Banco Central do Brasil (2000 a 2026) consolidadas no PostgreSQL, schema macroeconomia.</p>
+      </div>
+      <div class="author-tag">
+        <strong>Victor Ramos</strong><br>
+        <a href="https://ohxyytvictor.github.io/portfolio-victor-ramos/">Portfólio</a> |
+        <a href="https://github.com/OhXyytVictor/dados-publicos-brasil">Repositório</a>
+      </div>
+    </header>
+
+    <div class="filter-bar">
+      <label>Ano inicial <select id="f-ini" onchange="update()"></select></label>
+      <label>Ano final <select id="f-fim" onchange="update()"></select></label>
+      <label>Indicador do gráfico 1
+        <select id="f-ind" onchange="update()">
+          <option value="dolar">Dólar (R$)</option>
+          <option value="selic">Selic mensal (%)</option>
+          <option value="ipca">IPCA mensal (%)</option>
+        </select>
+      </label>
+      <div class="presets">
+        <button type="button" onclick="preset(2010, 2026, this)">Desde 2010</button>
+        <button type="button" onclick="preset(2020, 2026, this)">Pós-pandemia</button>
+        <button type="button" onclick="preset(2015, 2016, this)">Crise 2015-16</button>
+      </div>
+      <button type="button" onclick="resetFilters()">Limpar filtros</button>
+      <button type="button" onclick="exportCSV()">Exportar CSV</button>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-title">Dólar médio no período</div><div class="kpi-value" id="k-dolar">-</div><div class="kpi-sub" id="k-dolar-sub"></div></div>
+      <div class="kpi-card"><div class="kpi-title">IPCA acumulado</div><div class="kpi-value" id="k-ipca">-</div><div class="kpi-sub" id="k-ipca-sub"></div></div>
+      <div class="kpi-card"><div class="kpi-title">Selic anualizada média</div><div class="kpi-value" id="k-selic">-</div><div class="kpi-sub" id="k-selic-sub"></div></div>
+      <div class="kpi-card"><div class="kpi-title">Índice de vendas de tecnologia</div><div class="kpi-value" id="k-vendas">-</div><div class="kpi-sub" id="k-corr"></div></div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-box">
+        <div class="chart-title" id="t1">Indicador selecionado e índice de vendas</div>
+        <canvas id="c1" height="260"></canvas>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">IPCA e Selic mensais (%)</div>
+        <canvas id="c2" height="260"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-box" style="margin-bottom: 20px;">
+      <div class="chart-title">Dólar médio e Selic anualizada por ano</div>
+      <canvas id="c3" height="110"></canvas>
+      <div class="info-card" id="insight"></div>
+    </div>
+
+    <div class="chart-box">
+      <div class="chart-title">Resumo anual (view vw_ciclos_cambiais_tecnologia, a partir de 2010)</div>
+      <table>
+        <thead><tr><th>Ano</th><th>Dólar médio</th><th>Dólar mín.</th><th>Dólar máx.</th><th>IPCA acum.</th><th>Selic anual.</th><th>Índice vendas</th></tr></thead>
+        <tbody id="tb"></tbody>
+      </table>
+    </div>
+
+    <footer>Portfólio de Engenharia de Dados | Victor Ramos | Dados abertos BCB | PostgreSQL 18</footer>
+  </div>
+
+  <script>
+    const DATA = /*DATA*/;
+    const M = DATA.mensal.map(r => ({ ym: r[0], ano: +r[0].slice(0, 4), ipca: r[1], selic: r[2], dolar: r[3], vendas: r[4], mm12: r[5] }));
+    const A = DATA.anual.map(r => ({ ano: +r[0], dolar: r[1], ipca: r[2], selic: r[3], vendas: r[4], min: r[5], max: r[6] }));
+    const anos = [...new Set(M.map(m => m.ano))];
+    let c1, c2, c3;
+
+    const nf = (v, d = 2) => v == null ? '-' : v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const avg = a => { const v = a.filter(x => x != null); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
+
+    function corr(x, y) {
+      const p = x.map((v, i) => [v, y[i]]).filter(q => q[0] != null && q[1] != null);
+      if (p.length < 6) return null;
+      const mx = avg(p.map(q => q[0])), my = avg(p.map(q => q[1]));
+      let n = 0, dx = 0, dy = 0;
+      p.forEach(q => { n += (q[0] - mx) * (q[1] - my); dx += (q[0] - mx) ** 2; dy += (q[1] - my) ** 2; });
+      return n / Math.sqrt(dx * dy);
+    }
+
+    function fill() {
+      const ini = document.getElementById('f-ini'), fim = document.getElementById('f-fim');
+      anos.forEach(a => { ini.add(new Option(a, a)); fim.add(new Option(a, a)); });
+      ini.value = anos[0]; fim.value = anos[anos.length - 1];
+    }
+
+    function range() {
+      let a = +document.getElementById('f-ini').value, b = +document.getElementById('f-fim').value;
+      if (a > b) [a, b] = [b, a];
+      return [a, b];
+    }
+
+    function preset(a, b, btn) {
+      document.getElementById('f-ini').value = a;
+      document.getElementById('f-fim').value = b;
+      update();
+      document.querySelectorAll('.presets button').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    function resetFilters() {
+      document.getElementById('f-ini').value = anos[0];
+      document.getElementById('f-fim').value = anos[anos.length - 1];
+      document.getElementById('f-ind').value = 'dolar';
+      document.querySelectorAll('.presets button').forEach(x => x.classList.remove('active'));
+      update();
+    }
+
+    const axis = (pos, color, title) => ({ position: pos, ticks: { color }, grid: { color: pos === 'left' ? '#1e293b' : 'transparent' }, title: { display: !!title, text: title, color } });
+    const base = { responsive: true, interaction: { mode: 'index', intersect: false }, plugins: { legend: { labels: { color: '#94a3b8' } } } };
+
+    function update() {
+      const [a, b] = range();
+      const m = M.filter(r => r.ano >= a && r.ano <= b);
+      const an = A.filter(r => r.ano >= a && r.ano <= b);
+      const labels = m.map(r => r.ym);
+
+      const dMed = avg(m.map(r => r.dolar));
+      const last = m[m.length - 1];
+      document.getElementById('k-dolar').innerText = 'R$ ' + nf(dMed);
+      document.getElementById('k-dolar-sub').innerText = last ? `Último valor (${last.ym}): R$ ${nf(last.dolar)}` : '';
+      const ipca = (m.reduce((s, r) => s * (1 + (r.ipca || 0) / 100), 1) - 1) * 100;
+      document.getElementById('k-ipca').innerText = nf(ipca) + '%';
+      document.getElementById('k-ipca-sub').innerText = `${m.length} meses (${a} a ${b})`;
+      const selic = avg(m.map(r => r.selic)) * 12;
+      document.getElementById('k-selic').innerText = nf(selic) + '% a.a.';
+      document.getElementById('k-selic-sub').innerText = 'Média mensal x 12';
+      const v = avg(m.map(r => r.vendas));
+      document.getElementById('k-vendas').innerText = v == null ? 'Sem dados' : nf(v, 1);
+      const cr = corr(m.map(r => r.dolar), m.map(r => r.vendas));
+      document.getElementById('k-corr').innerText = cr == null ? 'Correlação com dólar: período curto' : `Correlação com dólar: ${nf(cr)}`;
+
+      const ind = document.getElementById('f-ind').value;
+      const meta = { dolar: ['Dólar (R$)', '#f59e0b'], selic: ['Selic mensal (%)', '#ef4444'], ipca: ['IPCA mensal (%)', '#10b981'] }[ind];
+      document.getElementById('t1').innerText = `${meta[0]} e índice de vendas de tecnologia`;
+
+      c1.data.labels = labels;
+      c1.data.datasets[0].label = meta[0]; c1.data.datasets[0].borderColor = meta[1];
+      c1.data.datasets[0].data = m.map(r => r[ind]);
+      c1.data.datasets[1].data = m.map(r => r.vendas);
+      c1.update();
+
+      c2.data.labels = labels;
+      c2.data.datasets[0].data = m.map(r => r.ipca);
+      c2.data.datasets[1].data = m.map(r => r.selic);
+      c2.update();
+
+      const al = an.map(r => r.ano);
+      c3.data.labels = al;
+      c3.data.datasets[0].data = an.map(r => r.dolar);
+      c3.data.datasets[1].data = an.map(r => r.selic);
+      c3.update();
+
+      document.getElementById('tb').innerHTML = an.map(r => `<tr><td><strong>${r.ano}</strong></td><td>R$ ${nf(r.dolar)}</td><td>R$ ${nf(r.min)}</td><td>R$ ${nf(r.max)}</td><td>${nf(r.ipca)}%</td><td>${nf(r.selic)}%</td><td>${nf(r.vendas, 1)}</td></tr>`).join('') || '<tr><td colspan="7">Sem dados anuais para o período (a view cobre a partir de 2010).</td></tr>';
+
+      let txt = `No período de ${a} a ${b}, o dólar médio foi de R$ ${nf(dMed)} e o IPCA acumulado de ${nf(ipca)}%, com Selic anualizada média de ${nf(selic)}%.`;
+      if (cr != null) {
+        const f = cr < -0.3 ? 'negativa: câmbio mais alto tende a coincidir com vendas menores de tecnologia' : cr > 0.3 ? 'positiva: neste recorte o volume de vendas acompanhou o câmbio' : 'fraca: não há relação linear clara neste recorte';
+        txt += ` A correlação entre dólar e índice de vendas é ${nf(cr)} (${f}).`;
+      }
+      document.getElementById('insight').innerText = txt;
+    }
+
+    function exportCSV() {
+      const [a, b] = range();
+      const rows = [['ano_mes', 'ipca_mensal_pct', 'selic_mensal_pct', 'dolar_brl', 'indice_vendas']];
+      M.filter(r => r.ano >= a && r.ano <= b).forEach(r => rows.push([r.ym, r.ipca, r.selic, r.dolar, r.vendas].map(x => x == null ? '' : x)));
+      const blob = new Blob([rows.map(r => r.join(';')).join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const el = document.createElement('a');
+      el.href = URL.createObjectURL(blob); el.download = `indicadores_${a}_${b}.csv`; el.click();
+    }
+
+    window.onload = function () {
+      fill();
+      c1 = new Chart(document.getElementById('c1'), {
+        type: 'line',
+        data: { labels: [], datasets: [
+          { label: '', data: [], borderColor: '#f59e0b', yAxisID: 'y', pointRadius: 0, borderWidth: 2, tension: 0.2 },
+          { label: 'Índice de vendas de tecnologia', data: [], borderColor: '#2563eb', yAxisID: 'y1', pointRadius: 0, borderWidth: 2, tension: 0.2, spanGaps: true }
+        ] },
+        options: { ...base, scales: { x: { ticks: { color: '#94a3b8', maxTicksLimit: 10 }, grid: { color: '#1e293b' } }, y: axis('left', '#94a3b8'), y1: axis('right', '#60a5fa') } }
+      });
+      c2 = new Chart(document.getElementById('c2'), {
+        type: 'line',
+        data: { labels: [], datasets: [
+          { label: 'IPCA mensal (%)', data: [], borderColor: '#10b981', pointRadius: 0, borderWidth: 1.5, tension: 0.2 },
+          { label: 'Selic mensal (%)', data: [], borderColor: '#ef4444', pointRadius: 0, borderWidth: 1.5, tension: 0.2 }
+        ] },
+        options: { ...base, scales: { x: { ticks: { color: '#94a3b8', maxTicksLimit: 10 }, grid: { color: '#1e293b' } }, y: axis('left', '#94a3b8') } }
+      });
+      c3 = new Chart(document.getElementById('c3'), {
+        type: 'bar',
+        data: { labels: [], datasets: [
+          { label: 'Dólar médio (R$)', data: [], backgroundColor: '#f59e0b', borderRadius: 4, yAxisID: 'y' },
+          { label: 'Selic anualizada (%)', data: [], backgroundColor: '#64748b', borderRadius: 4, yAxisID: 'y1' }
+        ] },
+        options: { ...base, scales: { x: { ticks: { color: '#94a3b8' }, grid: { display: false } }, y: axis('left', '#f59e0b'), y1: axis('right', '#94a3b8') } }
+      });
+      update();
+    };
+  </script>
+</body>
+</html>

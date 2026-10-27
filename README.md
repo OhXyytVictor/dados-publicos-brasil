@@ -1,5 +1,7 @@
 > **Navegacao:** [Portfolio (hub)](https://ohxyytvictor.github.io/portfolio-victor-ramos/) | [E-commerce Gamer (Olist)](https://github.com/OhXyytVictor/olist-ecommerce-analytics) | [Dados Publicos Brasil](https://github.com/OhXyytVictor/dados-publicos-brasil) | [Estudio Indie de Games](https://github.com/OhXyytVictor/indie-game-studio-analytics)
 
+> **Dashboard interativo:** [abrir painel com filtros](https://ohxyytvictor.github.io/dados-publicos-brasil/) (periodo, indicador, atalhos de crise, exportacao CSV). Gerado por `pipeline_etl/02_export_dashboard_data.py` a partir das views do PostgreSQL.
+
 # Pipeline Macroeconômico e Análise do Varejo de Tecnologia
 
 **Autor:** Victor Ramos  
@@ -225,6 +227,7 @@ dados-publicos-brasil/
 │       └── 02_cenarios_macroeconomicos_vendas.png
 ├── pipeline_etl/
 │   ├── 01_ingest_bcb_data.py               # Ingestao da API REST do Banco Central
+│   ├── 02_export_dashboard_data.py         # Exporta views para JSON e gera o dashboard
 │   └── generate_macro_charts.py            # Geracao automatizada dos graficos
 ├── sql/
 │   ├── 01_schema_macroeconomia.sql         # Schema e views no PostgreSQL
